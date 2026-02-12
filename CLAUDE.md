@@ -11,9 +11,18 @@ A modular Python job scraping system with:
 - SQLite (local) / PostgreSQL (cloud)
 - Azure-first cloud deployment strategy
 
-**Master architecture plan:** `docs/ai/master-plan.md`
+**Architecture & Roadmap:**
 
-Claude must always align with the approved master plan.
+| Document | Purpose |
+|----------|---------|
+| `docs/ai/master-plan.md` | Vision, architecture, design decisions, roadmap overview |
+| `docs/ai/phase-1-core.spec.md` | Phase 1: Foundation (restructure, config, DB, logging, tests) |
+| `docs/ai/phase-2-scrapers.spec.md` | Phase 2: Scraper Reliability (registry, browser, retry, fixes) |
+| `docs/ai/phase-3-dashboard.spec.md` | Phase 3: Production Readiness (Docker, auth, pagination, CI) |
+| `docs/ai/phase-4-cloud.spec.md` | Phase 4: Cloud Deployment (Azure ACA, PostgreSQL, Key Vault) |
+| `docs/ai/phase-5-observability.spec.md` | Phase 5: Enhancement (AI parsing, multi-user, monitoring) |
+
+Claude must always align with the approved master plan and active phase spec.
 
 ---
 
@@ -50,7 +59,7 @@ pip install -r requirements.txt
 - Temporary debug scripts must go into: `tools/`
 - Do not refactor unrelated modules without explicit request
 - Do not introduce new dependencies without justification and alignment with master-plan.md
-- Do not change architecture without referencing `docs/ai/master-plan.md`
+- Do not change architecture without referencing `docs/ai/master-plan.md` and the relevant phase spec
 - Always check if files exist before creating them
 
 ---
@@ -237,10 +246,11 @@ pytest --cov=src/careers_scraper
 ## Scope Discipline
 
 **Before implementing any task:**
-1. Check which phase it belongs to in `docs/ai/master-plan.md`
-2. If outside current phase: **Ask for clarification** before proceeding
-3. Never expand scope autonomously
-4. Always reference the master plan when suggesting architectural changes
+1. Identify which phase it belongs to by checking `docs/ai/master-plan.md` (roadmap overview)
+2. Open the relevant `docs/ai/phase-*.spec.md` for implementation details and checklist
+3. If outside current phase: **Ask for clarification** before proceeding
+4. Never expand scope autonomously
+5. Always reference the phase spec when implementing -- it is the implementation contract
 
 **When in doubt:**
 - Prefer simpler solutions
@@ -311,6 +321,7 @@ docker build -t careers-scraper .
 
 ## Getting Help
 
-- **Master Plan:** `docs/ai/master-plan.md` - comprehensive architecture guide
+- **Master Plan:** `docs/ai/master-plan.md` - architecture, decisions, roadmap overview
+- **Phase Specs:** `docs/ai/phase-*.spec.md` - implementation contracts per phase
 - **README:** `README.md` - project overview and setup
 - **This File:** `CLAUDE.md` - development rules and quick reference
