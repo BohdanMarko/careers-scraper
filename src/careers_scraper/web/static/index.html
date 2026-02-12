@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Careers Scraper Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Careers Scraper Dashboard</h1>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <h3>Total Jobs</h3>
+                <p id="total-jobs">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <h3>Matching Keywords</h3>
+                <p id="matching-jobs">Loading...</p>
+            </div>
+            <div class="stat-card">
+                <h3>Companies</h3>
+                <p id="total-companies">Loading...</p>
+            </div>
+        </div>
+
+        <div class="filters">
+            <label><input type="checkbox" id="matchingOnly"> Show only matching keywords</label>
+            <button onclick="loadJobs()">Refresh</button>
+        </div>
+
+        <div id="jobs-container">Loading jobs...</div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

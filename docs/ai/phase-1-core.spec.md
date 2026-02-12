@@ -14,6 +14,7 @@ Restructure the codebase and add essential tooling. No new features -- only infr
 - Set up pytest with fixtures
 - Extract embedded HTML/CSS/JS from `web_app.py` into static files
 - Create repository pattern (`db/repositories/`)
+- Define which version of Python should be used for this project to be compatible with each of packages - review existing .venv
 
 ## Non-Goals
 
