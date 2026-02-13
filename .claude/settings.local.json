@@ -21,7 +21,12 @@
       "Bash(python -m pytest:*)",
       "Bash(export PYTHONPATH:*)",
       "Bash(python run_tests.py:*)",
-      "Bash(python scripts/verify_imports.py:*)"
+      "Bash(python scripts/verify_imports.py:*)",
+      "Bash(ls:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(source:*)",
+      "Bash(where:*)",
+      "Bash(\"C:/Users/marko/AppData/Local/Programs/Python/Python313/python.exe\" -m venv .venv)"
     ]
   }
 }

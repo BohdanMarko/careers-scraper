@@ -27,8 +27,8 @@ def main():
     logger.info("Careers Scraper Starting...")
     logger.info("=" * 50)
 
-    # Database initialization handled by Alembic migrations
-    logger.info("Database should be initialized via: alembic upgrade head")
+    # Database initialization handled automatically by SQLAlchemy
+    logger.info("Database will be created automatically on first run")
 
     # Start scheduler in background
     logger.info("Starting job scheduler...")

@@ -47,7 +47,21 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Selenium
 geckodriver.log
 chromedriver.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+
+# Backups
+*.backup
+*.bak
+*.db.backup*
