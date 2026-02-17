@@ -1,56 +1,29 @@
-"""Application configuration using Pydantic settings."""
+"""Application configuration loaded from .env file."""
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import List
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-class Settings(BaseSettings):
-    """Application settings loaded from environment variables with CAREERS_ prefix."""
+class Settings:
+    """Application settings loaded from environment variables."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="CAREERS_",
-        env_file=".env",
-        case_sensitive=False,
-        extra="ignore"
-    )
+    # Telegram
+    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
 
-    # Application settings
-    environment: str = "development"
-    debug: bool = False
+    # Scraping
+    search_keywords: str = os.getenv("SEARCH_KEYWORDS", "python,backend,developer")
+    scrape_interval: int = int(os.getenv("SCRAPE_INTERVAL", "60"))
 
-    # Database settings
-    database_url: str = "sqlite:///./careers.db"
-
-    # Web server settings
-    web_host: str = "0.0.0.0"
-    web_port: int = 8000
-
-    # Telegram settings
-    telegram_bot_token: str = ""
-    telegram_chat_id: str = ""
-
-    # Scraping settings
-    search_keywords: str = "python,backend,developer"
-    scrape_interval: int = 60  # minutes
+    # App
+    environment: str = os.getenv("ENVIRONMENT", "development")
 
     @property
-    def keywords_list(self) -> List[str]:
-        """Convert comma-separated keywords to list."""
-        return [k.strip().lower() for k in self.search_keywords.split(",")]
-
-    @property
-    def engine_kwargs(self) -> dict:
-        """Get database engine configuration based on database type."""
-        if "sqlite" in self.database_url.lower():
-            return {"connect_args": {"check_same_thread": False}}
-        # PostgreSQL configuration for cloud deployment
-        return {
-            "pool_size": 5,
-            "max_overflow": 10,
-            "pool_pre_ping": True,
-            "pool_recycle": 3600,
-        }
+    def keywords_list(self) -> list[str]:
+        """Convert comma-separated keywords to lowercase list."""
+        return [k.strip().lower() for k in self.search_keywords.split(",") if k.strip()]
 
 
-# Global settings instance
 settings = Settings()

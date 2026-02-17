@@ -1,4 +1,4 @@
-"""Job scheduler for periodic scraping operations."""
+"""Periodic scraping scheduler."""
 
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -9,34 +9,27 @@ logger = logging.getLogger(__name__)
 
 
 class JobScheduler:
-    """Scheduler for periodic job scraping."""
+    """Runs scraping cycles on a fixed interval using APScheduler."""
 
     def __init__(self):
-        """Initialize scheduler and scraper service."""
         self.scheduler = BackgroundScheduler()
         self.scraper_service = ScraperService()
-        logger.debug("JobScheduler initialized")
 
     def start(self):
-        """Start the scheduler and run initial scraping cycle."""
-        # Run immediately on start
+        """Run an immediate scraping cycle then schedule periodic runs."""
         self.scraper_service.run_scraping_cycle()
 
-        # Schedule periodic runs
         self.scheduler.add_job(
             self.scraper_service.run_scraping_cycle,
-            'interval',
+            "interval",
             minutes=settings.scrape_interval,
-            id='scraping_job',
-            replace_existing=True
+            id="scraping_job",
+            replace_existing=True,
         )
-
         self.scheduler.start()
-        logger.info(
-            f"Scheduler started. Scraping every {settings.scrape_interval} minutes."
-        )
+        logger.info("Scheduler started. Scraping every %d minutes.", settings.scrape_interval)
 
     def stop(self):
-        """Stop the scheduler gracefully."""
+        """Shut down the scheduler gracefully."""
         self.scheduler.shutdown()
         logger.info("Scheduler stopped.")
