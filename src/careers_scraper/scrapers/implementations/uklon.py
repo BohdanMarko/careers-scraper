@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 class UklonScraper(BaseScraper):
     """Scraper for Uklon careers page."""
 
-    def __init__(self):
-        super().__init__("Uklon", "https://careers.uklon.net/vacancies-ua")
+    def __init__(self, url: str = "https://careers.uklon.net/vacancies-ua"):
+        super().__init__("Uklon", url)
 
     def scrape(self) -> List[Dict]:
         """Scrape job listings from Uklon careers page."""

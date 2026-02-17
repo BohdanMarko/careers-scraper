@@ -10,16 +10,7 @@ A lightweight Python job scraping system with:
 - APScheduler for periodic scraping
 - No database, no web server — scraping + notifications only
 
-**Architecture & Roadmap:**
-
-| Document | Purpose |
-|----------|---------|
-| `docs/ai/master-plan.md` | Vision, architecture, design decisions, roadmap overview |
-| `docs/ai/phase-2-scrapers.spec.md` | Phase 2: Scraper Reliability (registry, browser, retry, fixes) |
-| `docs/ai/phase-3-dashboard.spec.md` | Phase 3: Web dashboard (if ever re-added) |
-| `docs/ai/phase-4-cloud.spec.md` | Phase 4: Cloud Deployment |
-
-Claude must always align with the approved master plan and active phase spec.
+Current state: scraping + Telegram notifications only. No database, no web server.
 
 ---
 
@@ -49,7 +40,6 @@ pip install -r requirements.txt
 
 - **NEVER auto-commit changes** - only prepare commits when explicitly asked via `/commit`
 - **NEVER create files outside the project structure** unless explicitly asked
-- All AI-generated documentation must go to: `docs/ai/`
 - Do not refactor unrelated modules without explicit request
 - Do not introduce new dependencies without justification
 - Always check if files exist before creating them
@@ -103,29 +93,32 @@ Scheduler (APScheduler)
 
 # Run app
 python main.py
-
-# Test a single scraper manually
-python test_scraper.py uklon
-python test_scraper.py cdprojektred
-python test_scraper.py growe
-python test_scraper.py all
 ```
 
 ---
 
-## Environment Variables
+## Configuration
 
-Required in `.env` (copy from `.env.example`):
+All config lives in `config.yaml` (copy from `config.yaml.example`):
 
-```env
-TELEGRAM_BOT_TOKEN=...
-TELEGRAM_CHAT_ID=...
-SEARCH_KEYWORDS=python,backend,developer,engineer
-SCRAPE_INTERVAL=60
-ENVIRONMENT=development
+```yaml
+telegram_bot_token: ...
+telegram_chat_id: ...
+scrape_interval: 60
+environment: development
+
+vacancies:
+  - name: "Uklon"
+    url: "https://careers.uklon.net/vacancies-ua"
+    keywords: ["middle", "data"]
+  - name: "CD PROJEKT RED"
+    url: "https://www.cdprojektred.com/en/jobs?studio=poland"
+    keywords: ["developer"]
 ```
 
-Note: `CAREERS_` prefix is **NOT** used — plain variable names.
+**`config.yaml` is in `.gitignore` — contains secrets, never commit it.**
+
+Keywords are **per-vacancy**, not global.
 
 ---
 
@@ -137,11 +130,11 @@ requests==2.31.0
 selenium==4.17.2
 python-telegram-bot==21.0.1
 apscheduler==3.10.4
-python-dotenv==1.0.1
+pyyaml==6.0.2
 webdriver-manager==4.0.1
 ```
 
-No SQLAlchemy, no FastAPI, no Pydantic, no Alembic.
+No SQLAlchemy, no FastAPI, no Pydantic, no Alembic, no python-dotenv.
 
 ---
 
@@ -151,7 +144,7 @@ No SQLAlchemy, no FastAPI, no Pydantic, no Alembic.
 |------|---------|-------|
 | `main.py` | Root entry point wrapper | Imports from package |
 | `src/careers_scraper/main.py` | App entry point | start scheduler → sleep loop |
-| `src/careers_scraper/config.py` | Settings via python-dotenv | Plain `os.getenv()` |
+| `src/careers_scraper/config.py` | Settings from config.yaml | PyYAML + dataclasses |
 | `src/careers_scraper/scheduler.py` | APScheduler wrapper | Runs scraping cycle |
 | `src/careers_scraper/services/scraper_service.py` | Orchestration | In-memory dedup, keyword match, notify |
 | `src/careers_scraper/scrapers/base.py` | BaseScraper ABC | All scrapers inherit this |
@@ -167,16 +160,16 @@ No SQLAlchemy, no FastAPI, no Pydantic, no Alembic.
 ## Adding New Scrapers
 
 1. Create `src/careers_scraper/scrapers/implementations/mycompany.py`
-2. Inherit from `BaseScraper`, implement `scrape() -> list[dict]`
+2. Inherit from `BaseScraper`, implement `scrape() -> list[dict]`, accept `url` param
 3. Export from `src/careers_scraper/scrapers/__init__.py`
-4. Add instance to `scrapers` list in `src/careers_scraper/services/scraper_service.py`
+4. Add to `SCRAPER_REGISTRY` in `scraper_service.py`: `"mycompany": MyCompanyScraper`
+5. Add entry to `config.yaml` under `vacancies`
 
 ---
 
 ## Current Known Issues
 
 - **Uklon scraper broken** — placeholder CSS selectors, needs fixing
-- `test_scraper.py` imports from old flat-root structure — needs updating
 
 ---
 
@@ -185,14 +178,11 @@ No SQLAlchemy, no FastAPI, no Pydantic, no Alembic.
 ```bash
 .venv\Scripts\activate
 python main.py
-python test_scraper.py all
 ```
 
 ---
 
 ## Getting Help
 
-- **Master Plan:** `docs/ai/master-plan.md`
-- **Phase Specs:** `docs/ai/phase-*.spec.md`
-- **README:** `README.md`
-- **This File:** `CLAUDE.md`
+- **README:** `README.md` — setup and usage
+- **This File:** `CLAUDE.md` — development rules and architecture

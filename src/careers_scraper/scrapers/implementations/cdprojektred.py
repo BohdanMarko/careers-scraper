@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 class CDProjektRedScraper(BaseScraper):
     """Scraper for CD Projekt Red careers page."""
 
-    def __init__(self):
-        super().__init__("CD Projekt Red", "https://www.cdprojektred.com/en/jobs")
+    def __init__(self, url: str = "https://www.cdprojektred.com/en/jobs"):
+        super().__init__("CD Projekt Red", url)
 
     def scrape(self) -> List[Dict]:
         """Scrape job listings from CD Projekt Red careers page."""

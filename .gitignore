@@ -26,8 +26,9 @@ venv/
 ENV/
 env/
 
-# Environment variables
+# Environment / config (contain secrets)
 .env
+config.yaml
 
 # Database
 *.db

@@ -1,29 +1,51 @@
-"""Application configuration loaded from .env file."""
+"""Application configuration loaded from config.yaml."""
 
-import os
-from dotenv import load_dotenv
+import yaml
+from dataclasses import dataclass, field
+from pathlib import Path
 
-load_dotenv()
+CONFIG_PATH = Path(__file__).parent.parent.parent / "config.yaml"
 
 
+@dataclass
+class VacancyConfig:
+    name: str
+    url: str
+    keywords: list[str] = field(default_factory=list)
+
+
+@dataclass
 class Settings:
-    """Application settings loaded from environment variables."""
-
-    # Telegram
-    telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    telegram_chat_id: str = os.getenv("TELEGRAM_CHAT_ID", "")
-
-    # Scraping
-    search_keywords: str = os.getenv("SEARCH_KEYWORDS", "python,backend,developer")
-    scrape_interval: int = int(os.getenv("SCRAPE_INTERVAL", "60"))
-
-    # App
-    environment: str = os.getenv("ENVIRONMENT", "development")
-
-    @property
-    def keywords_list(self) -> list[str]:
-        """Convert comma-separated keywords to lowercase list."""
-        return [k.strip().lower() for k in self.search_keywords.split(",") if k.strip()]
+    telegram_bot_token: str
+    telegram_chat_id: str
+    vacancies: list[VacancyConfig]
+    scrape_interval: int = 60
+    environment: str = "development"
 
 
-settings = Settings()
+def _load() -> Settings:
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Config file not found: {CONFIG_PATH}")
+
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    vacancies = [
+        VacancyConfig(
+            name=v["name"],
+            url=v["url"],
+            keywords=[kw.lower() for kw in v.get("keywords", [])],
+        )
+        for v in data.get("vacancies", [])
+    ]
+
+    return Settings(
+        telegram_bot_token=str(data.get("telegram_bot_token", "")),
+        telegram_chat_id=str(data.get("telegram_chat_id", "")),
+        vacancies=vacancies,
+        scrape_interval=int(data.get("scrape_interval", 60)),
+        environment=str(data.get("environment", "development")),
+    )
+
+
+settings = _load()

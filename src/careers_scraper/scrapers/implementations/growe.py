@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class GroweScraper(BaseScraper):
     """Scraper for Growe careers page."""
 
-    def __init__(self):
-        super().__init__("Growe", "https://growe.com/career")
+    def __init__(self, url: str = "https://growe.com/career"):
+        super().__init__("Growe", url)
 
     def scrape(self) -> List[Dict]:
         """Scrape job listings from Growe careers page."""
