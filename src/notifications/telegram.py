@@ -26,28 +26,51 @@ class TelegramNotifier:
         if self.bot_token:
             logger.debug("Telegram notifier initialized")
 
-    def send_company_jobs(self, company: str, careers_url: str, jobs: list[dict]) -> None:
+    def send_company_jobs(self, company: str, careers_url: str, keywords: list[str], jobs: list[dict]) -> None:
         """Send one message listing all matching jobs for a company."""
         if not self.bot_token or not self.chat_id:
             logger.warning("Telegram not configured. Skipping notification.")
             return
 
-        message = self._format_company_message(company, careers_url, jobs)
+        message = self._format_company_message(company, careers_url, keywords, jobs)
         try:
             self._send(message)
             logger.info("Notification sent for %s (%d jobs)", company, len(jobs))
         except Exception as e:
             logger.error("Failed to send Telegram notification for %s: %s", company, e)
 
-    def _format_company_message(self, company: str, careers_url: str, jobs: list[dict]) -> str:
+    def send_no_matches(self, company: str, careers_url: str, keywords: list[str], count: int) -> None:
+        """Send a notification when new jobs were found but none matched keywords."""
+        if not self.bot_token or not self.chat_id:
+            logger.warning("Telegram not configured. Skipping notification.")
+            return
+
+        color = _COMPANY_COLORS.get(company.lower(), "\u26aa")
+        job_word = "job" if count == 1 else "jobs"
+        kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>\n" if keywords else ""
+        message = (
+            f"{color}  <b>{html.escape(company)}</b> - <i>no matching jobs</i>\n"
+            f"{kw_line}"
+            f"{count} {job_word} on page, none match your keywords.\n"
+            f"Careers page: {careers_url}"
+        )
+        try:
+            self._send(message)
+            logger.info("No-match notification sent for %s (%d new jobs)", company, count)
+        except Exception as e:
+            logger.error("Failed to send Telegram notification for %s: %s", company, e)
+
+    def _format_company_message(self, company: str, careers_url: str, keywords: list[str], jobs: list[dict]) -> str:
         """Format all jobs for a company into a single HTML message."""
         _LIMIT = 4000
 
         color = _COMPANY_COLORS.get(company.lower(), "\u26aa") # ⚪ default
         count = len(jobs)
         job_word = "job" if count == 1 else "jobs"
+        kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>\n" if keywords else ""
         header = (
             f"{color}  <b>{html.escape(company)}</b> - <i>{count} new {job_word} found</i>\n"
+            f"{kw_line}"
             f"Careers page: {careers_url}\n"
         )
 

@@ -51,22 +51,31 @@ class ScraperService:
         logger.info("Scraping cycle finished")
 
     def _process_jobs(self, vacancy: VacancyConfig, jobs: list[dict]):
-        """Collect new matching jobs for a vacancy, then send one batched notification."""
-        matched_jobs = []
+        """Collect new matching jobs for a vacancy, then send one batched notification.
+
+        _seen_urls tracks only jobs that were matched and notified, preventing
+        duplicate match alerts. The no-match notification fires every cycle where
+        the page has jobs but none match keywords, giving a consistent heartbeat.
+        """
+        new_matches = []
+        any_match = False
 
         for job in jobs:
             url = job.get("url", "")
-            if not url or url in self._seen_urls:
+            if not url:
                 continue
 
-            self._seen_urls.add(url)
-
             if self._matches_keywords(job, vacancy.keywords):
-                logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
-                matched_jobs.append(job)
+                any_match = True
+                if url not in self._seen_urls:
+                    self._seen_urls.add(url)
+                    new_matches.append(job)
+                    logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
 
-        if matched_jobs:
-            self.notifier.send_company_jobs(vacancy.name, vacancy.url, matched_jobs)
+        if new_matches:
+            self.notifier.send_company_jobs(vacancy.name, vacancy.url, vacancy.keywords, new_matches)
+        elif not any_match and jobs:
+            self.notifier.send_no_matches(vacancy.name, vacancy.url, vacancy.keywords, len(jobs))
 
     def _matches_keywords(self, job: dict, keywords: list[str]) -> bool:
         """Return True if any keyword appears in title, department, or description."""

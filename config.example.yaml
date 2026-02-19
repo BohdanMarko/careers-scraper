@@ -10,12 +10,12 @@ environment: development
 vacancies:
   - name: "Uklon"
     url: "https://careers.uklon.net/vacancies-ua"
-    keywords: ["middle", "data"]
+    keywords: ["middle .net", ".net", "backend", "back-end"]
 
   - name: "CD PROJEKT RED"
     url: "https://www.cdprojektred.com/en/jobs?studio=poland"
-    keywords: ["developer"]
-
+    keywords: ["DevOps", ".NET", "Developer Support"]
+    
   - name: "Growe"
-    url: "https://growe.com/career"
-    keywords: ["python", "backend"]
+    url: https://growe.com/career
+    keywords: ["middle .net", ".net", "backend", "back-end"]

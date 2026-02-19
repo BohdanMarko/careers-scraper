@@ -101,7 +101,7 @@ python main.py --single-run
 
 ## Configuration
 
-All config lives in `config.yaml` (copy from `config.yaml.example`):
+All config lives in `config.yaml` (copy from `config.example.yaml`):
 
 ```yaml
 telegram_bot_token: ...
@@ -159,7 +159,7 @@ careers-scraper/
 │   └── notifications/
 │       └── telegram.py            # Telegram bot (requests.post, HTML format)
 ├── requirements.txt
-└── config.yaml.example
+└── config.example.yaml
 ```
 
 ## Critical Files Reference

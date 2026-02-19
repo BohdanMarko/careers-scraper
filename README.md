@@ -36,7 +36,7 @@ careers-scraper/
 │   └── notifications/
 │       └── telegram.py            # Telegram bot
 ├── requirements.txt
-└── config.yaml.example
+└── config.example.yaml
 ```
 
 ## Local Setup
@@ -66,7 +66,7 @@ pip install -r requirements.txt
 Copy the example config and fill in your values:
 
 ```bash
-cp config.yaml.example config.yaml
+cp config.example.yaml config.yaml
 ```
 
 Edit `config.yaml`:
