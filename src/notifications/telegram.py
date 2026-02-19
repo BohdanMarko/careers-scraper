@@ -8,6 +8,7 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 _TELEGRAM_API_URL = "https://api.telegram.org/bot%s/sendMessage"
+_LIMIT = 4000  # Telegram hard limit is 4096, small safety margin
 
 _COMPANY_COLORS = {
     "uklon": "\U0001f7e1",           # 🟡 yellow
@@ -26,79 +27,83 @@ class TelegramNotifier:
         if self.bot_token:
             logger.debug("Telegram notifier initialized")
 
-    def send_company_jobs(self, company: str, careers_url: str, keywords: list[str], jobs: list[dict]) -> None:
-        """Send one message listing all matching jobs for a company."""
+    def send_cycle_summary(self, results: list[dict]) -> None:
+        """Send one combined message with results from all companies."""
         if not self.bot_token or not self.chat_id:
             logger.warning("Telegram not configured. Skipping notification.")
             return
 
-        message = self._format_company_message(company, careers_url, keywords, jobs)
+        sections = [s for r in results if (s := self._format_section(r))]
+        if not sections:
+            return
+
+        message = self._join_within_limit(sections)
+        total_matches = sum(len(r["new_matches"]) for r in results)
         try:
             self._send(message)
-            logger.info("Notification sent for %s (%d jobs)", company, len(jobs))
+            logger.info(
+                "Cycle summary sent (%d new matches, %d companies)",
+                total_matches, len(results),
+            )
         except Exception as e:
-            logger.error("Failed to send Telegram notification for %s: %s", company, e)
+            logger.error("Failed to send cycle summary: %s", e)
 
-    def send_no_matches(self, company: str, careers_url: str, keywords: list[str], count: int) -> None:
-        """Send a notification when new jobs were found but none matched keywords."""
-        if not self.bot_token or not self.chat_id:
-            logger.warning("Telegram not configured. Skipping notification.")
-            return
+    def _format_section(self, result: dict) -> str | None:
+        """Format one company's result into an HTML section.
+
+        Returns None when there's nothing to report (matches exist but all
+        already notified about — user already knows, no need to repeat).
+        """
+        company = result["company"]
+        careers_url = result["url"]
+        keywords = result["keywords"]
+        new_matches = result["new_matches"]
+        any_match = result["any_match"]
+        total_jobs = result["total_jobs"]
 
         color = _COMPANY_COLORS.get(company.lower(), "\u26aa")
-        job_word = "job" if count == 1 else "jobs"
         kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>\n" if keywords else ""
-        message = (
-            f"{color}  <b>{html.escape(company)}</b> - <i>no matching jobs</i>\n"
-            f"{kw_line}"
-            f"{count} {job_word} on page, none match your keywords.\n"
-            f"Careers page: {careers_url}"
-        )
-        try:
-            self._send(message)
-            logger.info("No-match notification sent for %s (%d new jobs)", company, count)
-        except Exception as e:
-            logger.error("Failed to send Telegram notification for %s: %s", company, e)
 
-    def _format_company_message(self, company: str, careers_url: str, keywords: list[str], jobs: list[dict]) -> str:
-        """Format all jobs for a company into a single HTML message."""
-        _LIMIT = 4000
+        if new_matches:
+            count = len(new_matches)
+            job_word = "job" if count == 1 else "jobs"
+            header = (
+                f"{color}  <b>{html.escape(company)}</b> - "
+                f"<i>{count} new {job_word} found</i>\n"
+                f"{kw_line}"
+                f"Careers page: {careers_url}\n"
+            )
+            entries = []
+            for job in new_matches:
+                title = html.escape(job.get("title", "Untitled"))
+                url = (job.get("url", "") or "").strip()
+                entry = f'\u2022 <a href="{url}">{title}</a>' if url else f"\u2022 {title}"
+                entries.append(entry)
+            return header + "\n".join(entries)
 
-        color = _COMPANY_COLORS.get(company.lower(), "\u26aa") # ⚪ default
-        count = len(jobs)
-        job_word = "job" if count == 1 else "jobs"
-        kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>\n" if keywords else ""
-        header = (
-            f"{color}  <b>{html.escape(company)}</b> - <i>{count} new {job_word} found</i>\n"
-            f"{kw_line}"
-            f"Careers page: {careers_url}\n"
-        )
+        if not any_match and total_jobs > 0:
+            job_word = "job" if total_jobs == 1 else "jobs"
+            return (
+                f"{color}  <b>{html.escape(company)}</b> - <i>no matching jobs</i>\n"
+                f"{kw_line}"
+                f"{total_jobs} {job_word} on page, none match your keywords.\n"
+                f"Careers page: {careers_url}"
+            )
 
-        entries = []
-        for job in jobs:
-            title = html.escape(job.get("title", "Untitled"))
-            url = (job.get("url", "") or "").strip()
+        return None  # any_match but all already notified — nothing new to say
 
-            if url:
-                entry = f'\u2022 <a href="{url}">{title}</a>'
-            else:
-                entry = f"\u2022 {title}"
-
-            entries.append(entry)
-
-        # Enforce Telegram's 4096-char hard limit, with a small safety margin.
-        base = header + "\n"
-        kept = []
-        for i, entry in enumerate(entries):
-            candidate = base + "\n".join(kept + [entry])
-            remaining = len(entries) - i - 1
-            trailer = f"\n...and {remaining} more." if remaining else ""
-            if len(candidate + trailer) > _LIMIT:
-                kept.append(f"    ...and {len(entries) - i} more.")
+    def _join_within_limit(self, sections: list[str]) -> str:
+        """Join sections with a blank line separator, truncating to fit the limit."""
+        separator = "\n\n"
+        message = ""
+        for i, section in enumerate(sections):
+            candidate = message + (separator if message else "") + section
+            if len(candidate) > _LIMIT:
+                remaining = len(sections) - i
+                message += f"\n\n...and {remaining} more section(s) truncated."
                 break
-            kept.append(entry)
-
-        return base + "\n".join(kept)
+            message = candidate
+        return message
 
     def _send(self, message: str) -> None:
         """POST a message to the Telegram Bot API."""

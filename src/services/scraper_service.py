@@ -40,22 +40,26 @@ class ScraperService:
         """Run one scraping cycle across all configured vacancies."""
         logger.info("Scraping cycle started at %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+        results = []
         for scraper, vacancy in self._scrapers:
             try:
                 jobs = scraper.scrape()
                 logger.info("Found %d jobs at %s", len(jobs), vacancy.name)
-                self._process_jobs(vacancy, jobs)
+                results.append(self._process_jobs(vacancy, jobs))
             except Exception as e:
                 logger.error("Error scraping %s: %s", vacancy.name, e, exc_info=True)
 
+        if results:
+            self.notifier.send_cycle_summary(results)
+
         logger.info("Scraping cycle finished")
 
-    def _process_jobs(self, vacancy: VacancyConfig, jobs: list[dict]):
-        """Collect new matching jobs for a vacancy, then send one batched notification.
+    def _process_jobs(self, vacancy: VacancyConfig, jobs: list[dict]) -> dict:
+        """Evaluate jobs for a vacancy and return a result dict for the cycle summary.
 
-        _seen_urls tracks only jobs that were matched and notified, preventing
-        duplicate match alerts. The no-match notification fires every cycle where
-        the page has jobs but none match keywords, giving a consistent heartbeat.
+        _seen_urls tracks only matched+notified URLs to prevent duplicate match alerts.
+        The no-match result is returned every cycle where no job on the page matches
+        keywords, giving a consistent per-cycle heartbeat.
         """
         new_matches = []
         any_match = False
@@ -72,10 +76,14 @@ class ScraperService:
                     new_matches.append(job)
                     logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
 
-        if new_matches:
-            self.notifier.send_company_jobs(vacancy.name, vacancy.url, vacancy.keywords, new_matches)
-        elif not any_match and jobs:
-            self.notifier.send_no_matches(vacancy.name, vacancy.url, vacancy.keywords, len(jobs))
+        return {
+            "company": vacancy.name,
+            "url": vacancy.url,
+            "keywords": vacancy.keywords,
+            "new_matches": new_matches,
+            "any_match": any_match,
+            "total_jobs": len(jobs),
+        }
 
     def _matches_keywords(self, job: dict, keywords: list[str]) -> bool:
         """Return True if any keyword appears in title, department, or description."""
