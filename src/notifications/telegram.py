@@ -3,7 +3,7 @@
 import html
 import logging
 import requests
-from careers_scraper.config import settings
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +47,8 @@ class TelegramNotifier:
         count = len(jobs)
         job_word = "job" if count == 1 else "jobs"
         header = (
-            f"{color}  <b>{html.escape(company)}</b>\n"
-            f'Careers page: {careers_url}\n'
-            f"<i>{count} new {job_word} found</i>\n"
+            f"{color}  <b>{html.escape(company)}</b> - <i>{count} new {job_word} found</i>\n"
+            f"Careers page: {careers_url}\n"
         )
 
         entries = []

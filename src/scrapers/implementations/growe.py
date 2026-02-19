@@ -6,7 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from typing import List, Dict
 import time
-from careers_scraper.scrapers.base import BaseScraper
+from scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 

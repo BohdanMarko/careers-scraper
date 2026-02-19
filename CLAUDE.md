@@ -10,8 +10,6 @@ A lightweight Python job scraping system with:
 - APScheduler for periodic scraping
 - No database, no web server — scraping + notifications only
 
-Current state: scraping + Telegram notifications only. No database, no web server.
-
 ---
 
 ## 🚨 CRITICAL: Python Environment
@@ -28,7 +26,8 @@ Current state: scraping + Telegram notifications only. No database, no web serve
 source .venv/Scripts/activate  # Git Bash
 
 # Run application
-python main.py
+python main.py                 # scheduler mode (default)
+python main.py --single-run    # run once and exit
 
 # Install dependencies
 pip install -r requirements.txt
@@ -59,15 +58,15 @@ Scheduler (APScheduler)
                     ↓ new URLs only (in-memory dedup)
             └── keyword match?
                     ↓ yes
-            └── TelegramNotifier.send_job_notification_sync()
+            └── TelegramNotifier.send_company_jobs()
 ```
 
 ### Module Boundaries
 
-- Scrapers live in `src/careers_scraper/scrapers/implementations/`
-- All scrapers inherit from `BaseScraper` in `scrapers/base.py`
+- Scrapers live in `src/scrapers/implementations/`
+- All scrapers inherit from `BaseScraper` in `src/scrapers/base.py`
 - No business logic inside scrapers — they return `list[dict]` only
-- Notification logic stays in `notifications/telegram.py`
+- Notification logic stays in `src/notifications/telegram.py`
 - No DB, no web server
 
 ### Job Dict Format (returned by scrapers)
@@ -91,8 +90,11 @@ Scheduler (APScheduler)
 # Activate venv
 .venv\Scripts\activate
 
-# Run app
+# Run scheduler (periodic scraping, Ctrl+C to stop)
 python main.py
+
+# Run one cycle and exit
+python main.py --single-run
 ```
 
 ---
@@ -125,51 +127,65 @@ Keywords are **per-vacancy**, not global.
 ## Dependencies
 
 ```
-beautifulsoup4==4.12.3
 requests==2.31.0
 selenium==4.17.2
-python-telegram-bot==21.0.1
 apscheduler==3.10.4
 pyyaml==6.0.2
-webdriver-manager==4.0.1
 ```
 
-No SQLAlchemy, no FastAPI, no Pydantic, no Alembic, no python-dotenv.
+No SQLAlchemy, no FastAPI, no Pydantic, no Alembic, no python-dotenv, no webdriver-manager.
+Telegram notifications use `requests.post()` directly (no telegram bot SDK).
 
 ---
+
+## Project Structure
+
+```
+careers-scraper/
+├── main.py                        # Single entry point (--single-run flag)
+├── src/
+│   ├── config.py                  # Settings from config.yaml (PyYAML + dataclasses)
+│   ├── scheduler.py               # APScheduler wrapper
+│   ├── core/
+│   │   └── logging.py             # Logging setup, suppresses noisy libs
+│   ├── scrapers/
+│   │   ├── base.py                # BaseScraper ABC
+│   │   └── implementations/
+│   │       ├── uklon.py
+│   │       ├── cdprojektred.py
+│   │       └── growe.py
+│   ├── services/
+│   │   └── scraper_service.py     # Orchestration: dedup, keyword match, notify
+│   └── notifications/
+│       └── telegram.py            # Telegram bot (requests.post, HTML format)
+├── requirements.txt
+└── config.yaml.example
+```
 
 ## Critical Files Reference
 
 | File | Purpose | Notes |
 |------|---------|-------|
-| `main.py` | Root entry point wrapper | Imports from package |
-| `src/careers_scraper/main.py` | App entry point | start scheduler → sleep loop |
-| `src/careers_scraper/config.py` | Settings from config.yaml | PyYAML + dataclasses |
-| `src/careers_scraper/scheduler.py` | APScheduler wrapper | Runs scraping cycle |
-| `src/careers_scraper/services/scraper_service.py` | Orchestration | In-memory dedup, keyword match, notify |
-| `src/careers_scraper/scrapers/base.py` | BaseScraper ABC | All scrapers inherit this |
-| `src/careers_scraper/scrapers/implementations/uklon.py` | Uklon | **BROKEN** — placeholder selectors |
-| `src/careers_scraper/scrapers/implementations/cdprojektred.py` | CD Projekt Red | Reads `window.cdpData.jobsData` |
-| `src/careers_scraper/scrapers/implementations/growe.py` | Growe | Selenium, multi-selector fallback |
-| `src/careers_scraper/notifications/telegram.py` | Telegram bot | HTML-formatted messages |
-| `src/careers_scraper/core/logging.py` | Logging setup | Suppresses noisy libs |
-| `test_scraper.py` | Manual testing | Not automated tests |
+| `main.py` | Single entry point | `--single-run` flag to run once |
+| `src/config.py` | Settings from config.yaml | PyYAML + dataclasses |
+| `src/scheduler.py` | APScheduler wrapper | Runs scraping cycle on interval |
+| `src/services/scraper_service.py` | Orchestration | In-memory dedup, keyword match, notify |
+| `src/scrapers/base.py` | BaseScraper ABC | All scrapers inherit this |
+| `src/scrapers/implementations/uklon.py` | Uklon scraper | Selenium, CSS selectors |
+| `src/scrapers/implementations/cdprojektred.py` | CD Projekt Red | Reads `window.cdpData.jobsData` |
+| `src/scrapers/implementations/growe.py` | Growe | Selenium, clicks VIEW MORE |
+| `src/notifications/telegram.py` | Telegram bot | HTML messages via requests.post |
+| `src/core/logging.py` | Logging setup | Suppresses noisy libs |
 
 ---
 
 ## Adding New Scrapers
 
-1. Create `src/careers_scraper/scrapers/implementations/mycompany.py`
+1. Create `src/scrapers/implementations/mycompany.py`
 2. Inherit from `BaseScraper`, implement `scrape() -> list[dict]`, accept `url` param
-3. Export from `src/careers_scraper/scrapers/__init__.py`
-4. Add to `SCRAPER_REGISTRY` in `scraper_service.py`: `"mycompany": MyCompanyScraper`
+3. Export from `src/scrapers/__init__.py`
+4. Add to `SCRAPER_REGISTRY` in `src/services/scraper_service.py`: `"mycompany": MyCompanyScraper`
 5. Add entry to `config.yaml` under `vacancies`
-
----
-
-## Current Known Issues
-
-- **Uklon scraper broken** — placeholder CSS selectors, needs fixing
 
 ---
 
@@ -178,6 +194,7 @@ No SQLAlchemy, no FastAPI, no Pydantic, no Alembic, no python-dotenv.
 ```bash
 .venv\Scripts\activate
 python main.py
+python main.py --single-run
 ```
 
 ---

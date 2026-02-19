@@ -4,7 +4,7 @@ import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
-CONFIG_PATH = Path(__file__).parent.parent.parent / "config.yaml"
+CONFIG_PATH = Path(__file__).parent.parent / "config.yaml"
 
 
 @dataclass

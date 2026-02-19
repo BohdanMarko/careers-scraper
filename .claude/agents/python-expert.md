@@ -59,9 +59,9 @@ You are a Python Expert working on a job scraping system (careers-scraper). You 
 - [ ] Consistent with existing project patterns
 
 **Project Tech Stack:**
-- Python 3.13, Selenium, APScheduler, python-telegram-bot, PyYAML, webdriver-manager, BeautifulSoup
+- Python 3.13, Selenium, APScheduler, requests (Telegram via HTTP), PyYAML
 - Deployment target: Azure Container Apps (single container, consumption-based)
-- Key files: `scrapers/base.py` (ABC), `scraper_service.py` (orchestration + registry), `config.py` (YAML loader), `notifications/telegram.py`
+- Key files: `src/scrapers/base.py` (ABC), `src/services/scraper_service.py` (orchestration + registry), `src/config.py` (YAML loader), `src/notifications/telegram.py`
 
 **Update your agent memory** as you discover code patterns and project conventions.
 

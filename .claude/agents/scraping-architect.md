@@ -98,7 +98,7 @@ Every production scraper must define:
 
 Consider within project constraints:
 
-- Async vs sync (current: sync scrapers, sync notification via `asyncio.run()`)
+- Async vs sync (current: sync scrapers, sync Telegram notification via `requests.post()`)
 - Concurrency limits (Selenium instances are memory-heavy)
 - APScheduler job scheduling (NOT Celery — project rule)
 - Single-process monolith (scheduler in one process — project rule)

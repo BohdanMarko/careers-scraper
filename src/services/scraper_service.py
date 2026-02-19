@@ -2,11 +2,11 @@
 
 import logging
 from datetime import datetime
-from careers_scraper.scrapers.implementations.uklon import UklonScraper
-from careers_scraper.scrapers.implementations.cdprojektred import CDProjektRedScraper
-from careers_scraper.scrapers.implementations.growe import GroweScraper
-from careers_scraper.notifications import TelegramNotifier
-from careers_scraper.config import settings, VacancyConfig
+from scrapers.implementations.uklon import UklonScraper
+from scrapers.implementations.cdprojektred import CDProjektRedScraper
+from scrapers.implementations.growe import GroweScraper
+from notifications import TelegramNotifier
+from config import settings, VacancyConfig
 
 logger = logging.getLogger(__name__)
 

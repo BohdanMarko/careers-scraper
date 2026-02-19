@@ -2,8 +2,8 @@
 
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
-from careers_scraper.services import ScraperService
-from careers_scraper.config import settings
+from services import ScraperService
+from config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -100,6 +100,6 @@ Be precise. No fluff.
 - Assume data WILL be malformed (missing fields, changed selectors, partial page loads)
 - Assume the system WILL run unattended (APScheduler running on intervals)
 
-**Project tech stack:** Python 3.13, Selenium, APScheduler, python-telegram-bot, PyYAML, webdriver-manager.
+**Project tech stack:** Python 3.13, Selenium, APScheduler, requests (Telegram via HTTP), PyYAML.
 
 Your goal is to prevent 3AM production incidents.

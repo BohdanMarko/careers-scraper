@@ -6,7 +6,7 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 
 - Scrapes career pages of configured companies on a fixed schedule
 - Filters new job listings by keywords
-- Sends a Telegram message for every new matching job
+- Sends a Telegram message per company for all new matching jobs
 - Deduplicates jobs in memory (no database needed)
 
 ## Supported Companies
@@ -19,23 +19,22 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 
 ```
 careers-scraper/
-├── src/careers_scraper/
+├── main.py                        # Single entry point
+├── src/
 │   ├── config.py                  # Settings from config.yaml
-│   ├── main.py                    # Entry point
 │   ├── scheduler.py               # APScheduler wrapper
 │   ├── core/
-│   │   └── logging.py            # Logging setup
+│   │   └── logging.py             # Logging setup
 │   ├── scrapers/
-│   │   ├── base.py               # BaseScraper ABC
+│   │   ├── base.py                # BaseScraper ABC
 │   │   └── implementations/
 │   │       ├── uklon.py
 │   │       ├── cdprojektred.py
 │   │       └── growe.py
 │   ├── services/
-│   │   └── scraper_service.py    # Orchestrates scraping + notifications
+│   │   └── scraper_service.py     # Orchestrates scraping + notifications
 │   └── notifications/
-│       └── telegram.py           # Telegram bot
-├── main.py                        # Entry point wrapper
+│       └── telegram.py            # Telegram bot
 ├── requirements.txt
 └── config.yaml.example
 ```
@@ -93,10 +92,14 @@ vacancies:
 ### 5. Run
 
 ```bash
+# Run scheduler (periodic, Ctrl+C to stop)
 python main.py
+
+# Run once and exit
+python main.py --single-run
 ```
 
-The app will immediately run a scraping cycle, then repeat on the configured interval (default: 60 minutes). Press `Ctrl+C` to stop.
+The app will immediately run a scraping cycle, then repeat on the configured interval (default: 60 minutes).
 
 ## Configuration Reference (`config.yaml`)
 
@@ -114,13 +117,10 @@ The app will immediately run a scraping cycle, then repeat on the configured int
 ## Dependencies
 
 ```
-beautifulsoup4==4.12.3
 requests==2.31.0
 selenium==4.17.2
-python-telegram-bot==21.0.1
 apscheduler==3.10.4
 pyyaml==6.0.2
-webdriver-manager==4.0.1
 ```
 
 ## How Deduplication Works
@@ -129,22 +129,22 @@ Seen job URLs are kept in memory (`set`). On first run every job is new. On subs
 
 ## Adding a New Company
 
-1. Create `src/careers_scraper/scrapers/implementations/mycompany.py`:
+1. Create `src/scrapers/implementations/mycompany.py`:
 
 ```python
-from careers_scraper.scrapers.base import BaseScraper
+from scrapers.base import BaseScraper
 
 class MyCompanyScraper(BaseScraper):
     def __init__(self, url: str = "https://careers.mycompany.com"):
         super().__init__("MyCompany", url)
 
     def scrape(self) -> list[dict]:
-        # return list of {"title", "url", "location", "department", "description"}
+        # return list of {"title", "url", "location", "department", "description", "posted_date"}
         return []
 ```
 
-2. Add to `src/careers_scraper/scrapers/__init__.py` exports.
-3. Register in `SCRAPER_REGISTRY` in `src/careers_scraper/services/scraper_service.py`:
+2. Add to `src/scrapers/__init__.py` exports.
+3. Register in `SCRAPER_REGISTRY` in `src/services/scraper_service.py`:
    ```python
    "mycompany": MyCompanyScraper,
    ```
@@ -157,11 +157,11 @@ class MyCompanyScraper(BaseScraper):
 
 ## Troubleshooting
 
-**ChromeDriver not found** — Chrome must be installed. `webdriver-manager` downloads the correct ChromeDriver automatically.
+**ChromeDriver not found** — Chrome must be installed. Selenium 4.6+ auto-downloads the matching ChromeDriver via its built-in manager.
 
 **Telegram not sending** — Check that `telegram_bot_token` and `telegram_chat_id` are set in `config.yaml`, and that you've started a conversation with the bot.
 
-**No jobs found** — Some scrapers (e.g. Uklon) have placeholder selectors. Run `python test_scraper.py uklon` to debug.
+**No jobs found** — Check the keywords in `config.yaml` — they must appear in job title, department, or description.
 
 ## License
 
