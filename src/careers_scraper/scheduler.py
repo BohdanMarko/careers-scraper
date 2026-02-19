@@ -25,6 +25,7 @@ class JobScheduler:
             minutes=settings.scrape_interval,
             id="scraping_job",
             replace_existing=True,
+            max_instances=1,
         )
         self.scheduler.start()
         logger.info("Scheduler started. Scraping every %d minutes.", settings.scrape_interval)

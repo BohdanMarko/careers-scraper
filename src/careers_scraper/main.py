@@ -4,14 +4,20 @@ import time
 from careers_scraper.core.logging import setup_logging
 from careers_scraper.scheduler import JobScheduler
 from careers_scraper.config import settings
+from careers_scraper.services.scraper_service import ScraperService
 
-logger = setup_logging(settings.environment)
+logger = setup_logging(settings.environment, log_file="log.txt")
 
 
 def main():
     logger.info("=" * 50)
     logger.info("Careers Scraper Starting...")
     logger.info("=" * 50)
+
+    if True:
+        scraper_service = ScraperService()
+        scraper_service.run_scraping_cycle()
+        return
 
     scheduler = JobScheduler()
     scheduler.start()

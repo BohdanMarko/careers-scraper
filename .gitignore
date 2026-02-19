@@ -48,6 +48,7 @@ Thumbs.db
 
 # Logs
 *.log
+log.txt
 logs/
 
 # Selenium

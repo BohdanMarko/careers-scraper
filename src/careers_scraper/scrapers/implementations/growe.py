@@ -4,8 +4,6 @@ import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from typing import List, Dict
 import time
 from careers_scraper.scrapers.base import BaseScraper
@@ -32,94 +30,75 @@ class GroweScraper(BaseScraper):
 
         driver = None
         try:
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=chrome_options
-            )
+            driver = webdriver.Chrome(options=chrome_options)
 
             driver.get(self.url)
 
             # Wait for page to load
             time.sleep(5)
 
-            # Try to click "view more" button if it exists to load all jobs
-            try:
-                view_more_button = driver.find_element(By.XPATH, "//*[contains(text(), 'view more') or contains(text(), 'View more')]")
-                view_more_button.click()
+            # Click "VIEW MORE" repeatedly until all jobs are loaded
+            for _ in range(20):
+                btns = driver.find_elements(By.CSS_SELECTOR, '[class*="vacancies-list__more"]')
+                if not btns:
+                    break
+                driver.execute_script('arguments[0].scrollIntoView(true)', btns[0])
+                driver.execute_script('arguments[0].click()', btns[0])
                 time.sleep(2)
-            except:
-                pass  # Button might not exist if all jobs are already displayed
 
-            # Find job listings - try multiple selector strategies
-            job_elements = []
+            # Each job card: <a class="*description__title*"> inside a wrapper div
+            # with a sibling <div class="*description__subtitle*"> holding dept + location
+            title_links = driver.find_elements(By.CSS_SELECTOR, 'a[class*="description__title"]')
 
-            # Try different selectors
-            selectors = [
-                "a[href*='/career/vacancy/']",
-                "[class*='vacancy']",
-                "[class*='job-item']",
-                "[class*='position']"
-            ]
-
-            for selector in selectors:
+            for link in title_links:
                 try:
-                    job_elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                    if job_elements:
-                        break
-                except:
-                    continue
+                    href = link.get_attribute("href") or ""
+                    if not href.startswith("http"):
+                        href = f"https://growe.com{href}"
+                    if "/career/vacancy/" not in href:
+                        continue
 
-            if not job_elements:
-                logger.warning("No job elements found with standard selectors, trying to extract from page structure")
-                # Fallback: try to find all links containing /career/vacancy/
-                job_elements = driver.find_elements(By.XPATH, "//a[contains(@href, '/career/vacancy/')]")
+                    title = link.text.strip()
+                    if not title:
+                        continue
 
-            for job_elem in job_elements:
-                try:
-                    # Get the job URL
-                    url = job_elem.get_attribute("href") or ""
-
-                    # Try to get text content
-                    text_content = job_elem.text.strip()
-
-                    # Parse the text content
-                    # Expected format: "Job Title" or "Job Title\nDepartment · Location"
-                    lines = text_content.split('\n')
-
-                    title = lines[0] if lines else ""
                     department = ""
                     location = ""
+                    try:
+                        # subtitle div is a sibling of the anchor inside the wrapper
+                        wrapper = driver.execute_script(
+                            "return arguments[0].parentElement", link
+                        )
+                        subtitle_ps = wrapper.find_elements(
+                            By.CSS_SELECTOR, '[class*="description__subtitle"] p'
+                        )
+                        # structure: [dept, ·, location]
+                        texts = [p.text.strip() for p in subtitle_ps if p.text.strip() and p.text.strip() != "·"]
+                        if len(texts) >= 2:
+                            department = texts[0]
+                            location = texts[1]
+                        elif len(texts) == 1:
+                            department = texts[0]
+                    except Exception:
+                        pass
 
-                    if len(lines) > 1:
-                        # Try to parse "Department · Location" format
-                        meta_info = lines[1].split('·')
-                        if len(meta_info) >= 2:
-                            department = meta_info[0].strip()
-                            location = meta_info[1].strip()
-                        elif len(meta_info) == 1:
-                            # Could be either department or location
-                            department = meta_info[0].strip()
-
-                    job = {
-                        'title': title,
-                        'location': location,
-                        'department': department,
-                        'url': url if url.startswith('http') else f"https://growe.com{url}",
-                        'description': text_content,
-                        'posted_date': None
-                    }
-
-                    if job['title'] and job['url']:  # Only add if we have title and URL
-                        jobs.append(job)
+                    jobs.append({
+                        "title": title,
+                        "url": href,
+                        "location": location,
+                        "department": department,
+                        "description": "",
+                        "posted_date": None,
+                    })
                 except Exception as e:
-                    logger.warning(f"Error parsing job element: {e}")
+                    logger.warning("Error parsing Growe job element: %s", e)
                     continue
 
         except Exception as e:
-            logger.error(f"Error scraping Growe careers page: {e}")
+            logger.error("Error scraping Growe careers page: %s", e)
         finally:
             if driver:
                 driver.quit()
 
-        logger.info(f"Scraped {len(jobs)} jobs from Growe")
+        logger.info("Scraped %d jobs from Growe", len(jobs))
         return jobs

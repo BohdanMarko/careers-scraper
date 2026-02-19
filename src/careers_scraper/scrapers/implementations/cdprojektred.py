@@ -3,8 +3,6 @@
 import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from typing import List, Dict
 import time
 from careers_scraper.scrapers.base import BaseScraper
@@ -31,10 +29,7 @@ class CDProjektRedScraper(BaseScraper):
 
         driver = None
         try:
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=chrome_options
-            )
+            driver = webdriver.Chrome(options=chrome_options)
 
             driver.get(self.url)
 
@@ -48,18 +43,30 @@ class CDProjektRedScraper(BaseScraper):
                 if jobs_data and isinstance(jobs_data, list):
                     for job_item in jobs_data:
                         try:
-                            # Build full URL
-                            apply_url = job_item.get('applyUrl', '')
+                            # Build detail URL from id + slug (cdprojektred.com/en/jobs/{id}-{slug})
+                            job_id = job_item.get('id', '')
+                            job_slug = job_item.get('slug', '')
+                            apply_url = f"https://www.cdprojektred.com/en/jobs/{job_id}-{job_slug}" if job_id and job_slug else job_item.get('applyUrl', '')
 
-                            # Extract location - handle both string and potential list
+                            # Extract location - handle string, list, or dict
                             location = job_item.get('location', '')
-                            if isinstance(location, list):
-                                location = ', '.join(location)
+                            if isinstance(location, dict):
+                                location = location.get('name', '')
+                            elif isinstance(location, list):
+                                location = ', '.join(
+                                    item.get('name', str(item)) if isinstance(item, dict) else str(item)
+                                    for item in location
+                                )
+
+                            # Extract category/department - handle dict
+                            category = job_item.get('category', '')
+                            if isinstance(category, dict):
+                                category = category.get('name', '')
 
                             job = {
                                 'title': job_item.get('name', ''),
                                 'location': location,
-                                'department': job_item.get('category', ''),
+                                'department': category,
                                 'url': apply_url,
                                 'description': f"Project: {job_item.get('project', 'N/A')} | Remote: {job_item.get('remote', False)}",
                                 'posted_date': None

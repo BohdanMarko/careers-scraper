@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 SCRAPER_REGISTRY = {
     "uklon": UklonScraper,
     "cd projekt red": CDProjektRedScraper,
-    "growe": GroweScraper,
+    "growe": GroweScraper
 }
 
 
@@ -51,7 +51,9 @@ class ScraperService:
         logger.info("Scraping cycle finished")
 
     def _process_jobs(self, vacancy: VacancyConfig, jobs: list[dict]):
-        """Send notifications for new jobs that match this vacancy's keywords."""
+        """Collect new matching jobs for a vacancy, then send one batched notification."""
+        matched_jobs = []
+
         for job in jobs:
             url = job.get("url", "")
             if not url or url in self._seen_urls:
@@ -61,24 +63,18 @@ class ScraperService:
 
             if self._matches_keywords(job, vacancy.keywords):
                 logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
-                try:
-                    self.notifier.send_job_notification_sync({
-                        "company": vacancy.name,
-                        "title": job.get("title", ""),
-                        "location": job.get("location", ""),
-                        "department": job.get("department", ""),
-                        "url": url,
-                    })
-                except Exception as e:
-                    logger.error("Failed to send notification: %s", e)
+                matched_jobs.append(job)
+
+        if matched_jobs:
+            self.notifier.send_company_jobs(vacancy.name, vacancy.url, matched_jobs)
 
     def _matches_keywords(self, job: dict, keywords: list[str]) -> bool:
         """Return True if any keyword appears in title, department, or description."""
         if not keywords:
             return False
         text = " ".join([
-            job.get("title", ""),
-            job.get("department", ""),
-            job.get("description", ""),
+            str(job.get("title", "") or ""),
+            str(job.get("department", "") or ""),
+            str(job.get("description", "") or ""),
         ]).lower()
-        return any(kw in text for kw in keywords)
+        return any(kw.lower() in text for kw in keywords)

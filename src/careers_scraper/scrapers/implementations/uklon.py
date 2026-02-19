@@ -3,11 +3,7 @@
 import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from typing import List, Dict
 import time
 from careers_scraper.scrapers.base import BaseScraper
@@ -25,74 +21,61 @@ class UklonScraper(BaseScraper):
         """Scrape job listings from Uklon careers page."""
         jobs = []
 
-        # Set up headless Chrome
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
 
         driver = None
         try:
-            driver = webdriver.Chrome(
-                service=Service(ChromeDriverManager().install()),
-                options=chrome_options
-            )
-
+            driver = webdriver.Chrome(options=chrome_options)
             driver.get(self.url)
+            time.sleep(8)
 
-            # Wait for page to load (adjust selector based on actual page structure)
-            time.sleep(5)  # Initial wait for dynamic content
+            # Scroll to trigger lazy loading
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(3)
 
-            # TODO: Update these selectors based on actual page structure
-            # This is a placeholder - you'll need to inspect the actual page
-            # and update the selectors accordingly
+            # Each job is a card: div.w-grid__item-panel
+            cards = driver.find_elements(By.CSS_SELECTOR, "div.w-grid__item-panel")
 
-            try:
-                job_elements = driver.find_elements(By.CSS_SELECTOR, "[class*='vacancy'], [class*='job']")
+            for card in cards:
+                try:
+                    title = card.find_element(
+                        By.CSS_SELECTOR, "p.ui-heading span.w-text-content"
+                    ).text.strip()
 
-                for job_elem in job_elements:
-                    try:
-                        job = {
-                            'title': self._safe_get_text(job_elem, "[class*='title']"),
-                            'location': self._safe_get_text(job_elem, "[class*='location']"),
-                            'department': self._safe_get_text(job_elem, "[class*='department']"),
-                            'url': self._safe_get_link(job_elem),
-                            'description': self._safe_get_text(job_elem, "[class*='description']"),
-                            'posted_date': None
-                        }
+                    location = card.find_element(
+                        By.CSS_SELECTOR, "p.ui-text span.w-text-content"
+                    ).text.strip()
 
-                        if job['title']:  # Only add if we found a title
-                            jobs.append(job)
-                    except Exception as e:
-                        logger.warning(f"Error parsing job element: {e}")
+                    link_el = card.find_element(By.CSS_SELECTOR, "a[data-component='button']")
+                    href = link_el.get_attribute("href") or ""
+                    if href and not href.startswith("http"):
+                        href = "https://careers.uklon.net" + href
+
+                    if not title or not href:
                         continue
 
-            except Exception as e:
-                logger.error(f"Error finding job elements: {e}")
+                    jobs.append({
+                        "title": title,
+                        "url": href,
+                        "location": location,
+                        "department": "",
+                        "description": "",
+                        "posted_date": None,
+                    })
+                except Exception as e:
+                    logger.debug("Skipping non-job card: %s", e)
+                    continue
 
         except Exception as e:
-            logger.error(f"Error scraping Uklon careers page: {e}")
+            logger.error("Error scraping Uklon careers page: %s", e)
         finally:
             if driver:
                 driver.quit()
 
-        logger.info(f"Scraped {len(jobs)} jobs from Uklon")
+        logger.info("Scraped %d jobs from Uklon", len(jobs))
         return jobs
-
-    def _safe_get_text(self, parent_element, selector: str) -> str:
-        """Safely get text from an element."""
-        try:
-            element = parent_element.find_element(By.CSS_SELECTOR, selector)
-            return element.text.strip()
-        except:
-            return ""
-
-    def _safe_get_link(self, element) -> str:
-        """Safely get link from an element."""
-        try:
-            link = element.find_element(By.TAG_NAME, "a")
-            href = link.get_attribute("href")
-            return href if href else ""
-        except:
-            return ""
