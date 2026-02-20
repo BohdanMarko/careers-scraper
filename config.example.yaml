@@ -7,6 +7,10 @@ scrape_interval: 60
 # App environment: development or production
 environment: development
 
+log_rotation:
+  max_bytes: 10485760  # 10 MB
+  backup_count: 5
+
 vacancies:
   - name: "Uklon"
     url: "https://careers.uklon.net/vacancies-ua"

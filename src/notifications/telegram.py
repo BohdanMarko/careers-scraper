@@ -67,11 +67,13 @@ class TelegramNotifier:
         if new_matches:
             count = len(new_matches)
             job_word = "job" if count == 1 else "jobs"
+            total_word = "job" if total_jobs == 1 else "jobs"
             header = (
                 f"{color}  <b>{html.escape(company)}</b> - "
-                f"<i>{count} new {job_word} found</i>\n"
+                f"<i>{count} new {job_word} found</i> ({total_jobs} {total_word} on page)\n"
                 f"{kw_line}"
                 f"Careers page: {careers_url}\n"
+                f"\nMatches:"
             )
             entries = []
             for job in new_matches:
@@ -79,7 +81,7 @@ class TelegramNotifier:
                 url = (job.get("url", "") or "").strip()
                 entry = f'\u2022 <a href="{url}">{title}</a>' if url else f"\u2022 {title}"
                 entries.append(entry)
-            return header + "\n".join(entries)
+            return header + "\n" + "\n".join(entries)
 
         if not any_match and total_jobs > 0:
             job_word = "job" if total_jobs == 1 else "jobs"

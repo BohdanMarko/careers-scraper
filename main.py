@@ -12,7 +12,12 @@ from scheduler import JobScheduler
 from services.scraper_service import ScraperService
 from config import settings
 
-logger = setup_logging(settings.environment, log_file="log.txt")
+logger = setup_logging(
+    settings.environment,
+    log_file="log.txt",
+    log_rotation_max_bytes=settings.log_rotation.max_bytes,
+    log_rotation_backup_count=settings.log_rotation.backup_count,
+)
 
 
 def main():

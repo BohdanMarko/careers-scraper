@@ -2,16 +2,24 @@
 
 import logging
 import sys
+from logging.handlers import RotatingFileHandler
 from typing import Optional
 
 
-def setup_logging(environment: str = "development", log_file: Optional[str] = None):
+def setup_logging(
+    environment: str = "development",
+    log_file: Optional[str] = None,
+    log_rotation_max_bytes: int = 10 * 1024 * 1024,
+    log_rotation_backup_count: int = 5,
+):
     """
     Configure structured logging for the application.
 
     Args:
         environment: Environment name ("development" or "production")
         log_file: Optional file path for logging output
+        log_rotation_max_bytes: Max size per log file before rotation
+        log_rotation_backup_count: Number of rotated log files to keep
 
     Returns:
         Logger instance for the calling module
@@ -22,7 +30,12 @@ def setup_logging(environment: str = "development", log_file: Optional[str] = No
 
     handlers = [logging.StreamHandler(sys.stdout)]
     if log_file:
-        handlers.append(logging.FileHandler(log_file))
+        handlers.append(RotatingFileHandler(
+            log_file,
+            maxBytes=log_rotation_max_bytes,
+            backupCount=log_rotation_backup_count,
+            encoding="utf-8",
+        ))
 
     logging.basicConfig(
         level=level,

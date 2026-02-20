@@ -71,7 +71,7 @@ class ScraperService:
 
             if self._matches_keywords(job, vacancy.keywords):
                 any_match = True
-                if url not in self._seen_urls:
+                if not settings.dedup_seen_urls or url not in self._seen_urls:
                     self._seen_urls.add(url)
                     new_matches.append(job)
                     logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
