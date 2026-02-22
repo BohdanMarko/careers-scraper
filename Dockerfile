@@ -20,4 +20,4 @@ COPY src/ src/
 # Telegram credentials are injected at runtime via TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID env vars.
 COPY config.example.yaml config.yaml
 
-CMD ["python", "main.py", "--single-run"]
+CMD ["python", "main.py"]

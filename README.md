@@ -4,7 +4,7 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 
 ## What It Does
 
-- Scrapes career pages of configured companies on a fixed schedule
+- Scrapes career pages of configured companies (scheduled externally via Azure CRON)
 - Runs all scrapers in parallel for speed (~15s per cycle)
 - Filters new job listings by keywords (per-company, case-insensitive)
 - Sends a single Telegram message summarising all companies per cycle
@@ -20,10 +20,9 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 
 ```
 careers-scraper/
-├── main.py                        # Single entry point (--single-run flag)
+├── main.py                        # Single entry point — runs one cycle and exits
 ├── src/
 │   ├── config.py                  # Settings from config.yaml + env var overrides
-│   ├── scheduler.py               # APScheduler wrapper
 │   ├── core/
 │   │   └── logging.py             # Logging setup, suppresses noisy libs
 │   ├── scrapers/
@@ -77,7 +76,6 @@ Edit `config.yaml` with your credentials and keywords:
 ```yaml
 telegram_bot_token: YOUR_BOT_TOKEN_HERE
 telegram_chat_id: YOUR_CHAT_ID_HERE
-scrape_interval: 60
 
 vacancies:
   - name: "Uklon"
@@ -93,14 +91,10 @@ vacancies:
 ### 4. Run
 
 ```bash
-# Run scheduler (periodic, Ctrl+C to stop)
 python main.py
-
-# Run once and exit
-python main.py --single-run
 ```
 
-On first start the app runs one scraping cycle immediately, then repeats on the configured interval.
+Runs one scraping cycle and exits. Scheduling is handled externally (Azure CRON job in production, or a task scheduler locally).
 
 ---
 
@@ -120,7 +114,6 @@ On first start the app runs one scraping cycle immediately, then repeats on the 
 |-------|----------|---------|-------------|
 | `telegram_bot_token` | Yes | — | Bot token from @BotFather. Can also be set via `TELEGRAM_BOT_TOKEN` env var |
 | `telegram_chat_id` | Yes | — | Target chat/channel ID. Can also be set via `TELEGRAM_CHAT_ID` env var |
-| `scrape_interval` | No | `60` | Minutes between scraping cycles |
 | `environment` | No | `development` | `development` = DEBUG logging, `production` = INFO |
 | `dedup_seen_urls` | No | `true` | Skip already-notified job URLs. Set to `false` in containers (no state between runs) |
 | `vacancies` | Yes | — | List of companies to scrape, in the order they appear in Telegram messages |
@@ -209,7 +202,6 @@ The `.github/workflows/deploy.yml` workflow automatically builds and pushes a ne
 ```
 requests==2.31.0
 selenium==4.17.2
-apscheduler==3.10.4
 pyyaml==6.0.2
 ```
 

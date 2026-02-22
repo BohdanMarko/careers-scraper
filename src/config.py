@@ -26,7 +26,6 @@ class Settings:
     telegram_bot_token: str
     telegram_chat_id: str
     vacancies: list[VacancyConfig]
-    scrape_interval: int = 60
     environment: str = "development"
     dedup_seen_urls: bool = True
     log_rotation: LogRotationConfig = field(default_factory=LogRotationConfig)
@@ -61,7 +60,6 @@ def _load() -> Settings:
         telegram_bot_token=token,
         telegram_chat_id=chat_id,
         vacancies=vacancies,
-        scrape_interval=int(data.get("scrape_interval", 60)),
         environment=str(data.get("environment", "development")),
         dedup_seen_urls=bool(data.get("dedup_seen_urls", True)),
         log_rotation=log_rotation,
