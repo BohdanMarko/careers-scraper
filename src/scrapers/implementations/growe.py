@@ -1,12 +1,10 @@
 """Scraper for Growe careers page."""
 
 import logging
-from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from typing import List, Dict
 import time
-from scrapers.base import BaseScraper
+from scrapers.base import BaseScraper, create_chrome_driver
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +19,9 @@ class GroweScraper(BaseScraper):
         """Scrape job listings from Growe careers page."""
         jobs = []
 
-        # Set up headless Chrome
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-
         driver = None
         try:
-            driver = webdriver.Chrome(options=chrome_options)
+            driver = create_chrome_driver()
 
             driver.get(self.url)
 

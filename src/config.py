@@ -1,5 +1,6 @@
 """Application configuration loaded from config.yaml."""
 
+import os
 import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,6 +39,9 @@ def _load() -> Settings:
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
+    token = os.environ.get("TELEGRAM_BOT_TOKEN") or str(data.get("telegram_bot_token", ""))
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID") or str(data.get("telegram_chat_id", ""))
+
     vacancies = [
         VacancyConfig(
             name=v["name"],
@@ -54,8 +58,8 @@ def _load() -> Settings:
     )
 
     return Settings(
-        telegram_bot_token=str(data.get("telegram_bot_token", "")),
-        telegram_chat_id=str(data.get("telegram_chat_id", "")),
+        telegram_bot_token=token,
+        telegram_chat_id=chat_id,
         vacancies=vacancies,
         scrape_interval=int(data.get("scrape_interval", 60)),
         environment=str(data.get("environment", "development")),

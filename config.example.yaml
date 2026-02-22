@@ -2,10 +2,13 @@ telegram_bot_token: YOUR_BOT_TOKEN_HERE
 telegram_chat_id: YOUR_CHAT_ID_HERE
 
 # How often to scrape (in minutes)
-scrape_interval: 60
+scrape_interval: 15
 
 # App environment: development or production
-environment: development
+environment: production
+
+# Set to false when running in containers (no cross-run state)
+dedup_seen_urls: false
 
 log_rotation:
   max_bytes: 10485760  # 10 MB

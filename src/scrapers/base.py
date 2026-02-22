@@ -1,11 +1,31 @@
 """Base class for all career page scrapers."""
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import List, Dict
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 logger = logging.getLogger(__name__)
+
+
+def create_chrome_driver() -> webdriver.Chrome:
+    """Create a headless Chrome driver. Reads CHROME_BINARY and CHROMEDRIVER_PATH env vars."""
+    opts = Options()
+    opts.add_argument("--headless")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1920,1080")
+    chrome_binary = os.environ.get("CHROME_BINARY")
+    if chrome_binary:
+        opts.binary_location = chrome_binary
+    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
+    service = Service(executable_path=chromedriver_path) if chromedriver_path else None
+    return webdriver.Chrome(options=opts, service=service) if service else webdriver.Chrome(options=opts)
 
 
 class BaseScraper(ABC):

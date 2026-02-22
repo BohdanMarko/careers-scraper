@@ -1,0 +1,12 @@
+.venv/
+.git/
+.gitignore
+config.yaml
+.claude/
+__pycache__/
+*.pyc
+log.txt
+log.txt.*
+notes.txt
+.idea/
+.vscode/
