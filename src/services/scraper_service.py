@@ -1,6 +1,7 @@
 """Service for orchestrating job scraping and notifications."""
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from scrapers.implementations.uklon import UklonScraper
 from scrapers.implementations.cdprojektred import CDProjektRedScraper
@@ -41,13 +42,19 @@ class ScraperService:
         logger.info("Scraping cycle started at %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
         results = []
-        for scraper, vacancy in self._scrapers:
-            try:
-                jobs = scraper.scrape()
-                logger.info("Found %d jobs at %s", len(jobs), vacancy.name)
-                results.append(self._process_jobs(vacancy, jobs))
-            except Exception as e:
-                logger.error("Error scraping %s: %s", vacancy.name, e, exc_info=True)
+        with ThreadPoolExecutor(max_workers=len(self._scrapers)) as pool:
+            # Submit all scrapers concurrently, preserving config order for results
+            ordered_futures = [
+                (pool.submit(scraper.scrape), scraper, vacancy)
+                for scraper, vacancy in self._scrapers
+            ]
+            for future, scraper, vacancy in ordered_futures:
+                try:
+                    jobs = future.result()
+                    logger.info("Found %d jobs at %s", len(jobs), vacancy.name)
+                    results.append(self._process_jobs(vacancy, jobs))
+                except Exception as e:
+                    logger.error("Error scraping %s: %s", vacancy.name, e, exc_info=True)
 
         if results:
             self.notifier.send_cycle_summary(results)
@@ -73,6 +80,8 @@ class ScraperService:
                 any_match = True
                 if not settings.dedup_seen_urls or url not in self._seen_urls:
                     self._seen_urls.add(url)
+                    if len(self._seen_urls) > 10_000:
+                        self._seen_urls = set(list(self._seen_urls)[5_000:])
                     new_matches.append(job)
                     logger.info("New match: %s - %s", vacancy.name, job.get("title", ""))
 

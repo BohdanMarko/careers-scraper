@@ -2,8 +2,9 @@
 
 import logging
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from typing import List, Dict
-import time
 from scrapers.base import BaseScraper, create_chrome_driver
 
 logger = logging.getLogger(__name__)
@@ -23,11 +24,10 @@ class UklonScraper(BaseScraper):
         try:
             driver = create_chrome_driver()
             driver.get(self.url)
-            time.sleep(8)
+            WebDriverWait(driver, 15).until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.w-grid__item-panel")))
 
             # Scroll to trigger lazy loading
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight)")
-            time.sleep(3)
 
             # Each job is a card: div.w-grid__item-panel
             cards = driver.find_elements(By.CSS_SELECTOR, "div.w-grid__item-panel")

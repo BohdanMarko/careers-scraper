@@ -2,6 +2,7 @@
 
 import html
 import logging
+import time
 import requests
 from config import settings
 
@@ -9,12 +10,7 @@ logger = logging.getLogger(__name__)
 
 _TELEGRAM_API_URL = "https://api.telegram.org/bot%s/sendMessage"
 _LIMIT = 4000  # Telegram hard limit is 4096, small safety margin
-
-_COMPANY_COLORS = {
-    "uklon": "\U0001f7e1",           # 🟡 yellow
-    "cd projekt red": "\U0001f534",  # 🔴 red
-    "growe": "\U0001f7e2"            # 🟢 green
-}
+_SEPARATOR = "──────────────"
 
 
 class TelegramNotifier:
@@ -61,54 +57,54 @@ class TelegramNotifier:
         any_match = result["any_match"]
         total_jobs = result["total_jobs"]
 
-        color = _COMPANY_COLORS.get(company.lower(), "\u26aa")
-        kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>\n" if keywords else ""
+        total_word = "job" if total_jobs == 1 else "jobs"
+        kw_line = f"Keywords: <i>{html.escape(', '.join(keywords))}</i>" if keywords else ""
 
         if new_matches:
             count = len(new_matches)
-            job_word = "job" if count == 1 else "jobs"
-            total_word = "job" if total_jobs == 1 else "jobs"
-            header = (
-                f"{color}  <b>{html.escape(company)}</b> - "
-                f"<i>{count} new {job_word} found</i> ({total_jobs} {total_word} on page)\n"
-                f"{kw_line}"
-                f"Careers page: {careers_url}\n"
-                f"\nMatches:"
-            )
-            entries = []
+            match_word = "match" if count == 1 else "matches"
+            lines = [
+                f"<b>{html.escape(company)}</b>",
+                f"<b>{count} new {match_word}</b>  ·  {total_jobs} {total_word} on page",
+            ]
+            if kw_line:
+                lines.append(kw_line)
+            lines.append("")
             for job in new_matches:
                 title = html.escape(job.get("title", "Untitled"))
                 url = (job.get("url", "") or "").strip()
-                entry = f'\u2022 <a href="{url}">{title}</a>' if url else f"\u2022 {title}"
-                entries.append(entry)
-            return header + "\n" + "\n".join(entries)
+                lines.append(f'• <a href="{url}">{title}</a>' if url else f"• {title}")
+            lines.append("")
+            lines.append(f'<a href="{careers_url}">Careers page →</a>')
+            return "\n".join(lines)
 
         if not any_match and total_jobs > 0:
-            job_word = "job" if total_jobs == 1 else "jobs"
-            return (
-                f"{color}  <b>{html.escape(company)}</b> - <i>no matching jobs</i>\n"
-                f"{kw_line}"
-                f"{total_jobs} {job_word} on page, none match your keywords.\n"
-                f"Careers page: {careers_url}"
-            )
+            lines = [
+                f"<b>{html.escape(company)}</b>",
+                f"No matches  ·  {total_jobs} {total_word} on page",
+            ]
+            if kw_line:
+                lines.append(kw_line)
+            lines.append(f'<a href="{careers_url}">Careers page →</a>')
+            return "\n".join(lines)
 
         return None  # any_match but all already notified — nothing new to say
 
     def _join_within_limit(self, sections: list[str]) -> str:
-        """Join sections with a blank line separator, truncating to fit the limit."""
-        separator = "\n\n"
+        """Join sections with a divider separator, truncating to fit the limit."""
+        separator = f"\n{_SEPARATOR}\n"
         message = ""
         for i, section in enumerate(sections):
             candidate = message + (separator if message else "") + section
             if len(candidate) > _LIMIT:
                 remaining = len(sections) - i
-                message += f"\n\n...and {remaining} more section(s) truncated."
+                message += f"\n{_SEPARATOR}\n...and {remaining} more section(s) truncated."
                 break
             message = candidate
         return message
 
     def _send(self, message: str) -> None:
-        """POST a message to the Telegram Bot API."""
+        """POST a message to the Telegram Bot API with retry on failure."""
         url = _TELEGRAM_API_URL % self.bot_token
         payload = {
             "chat_id": self.chat_id,
@@ -116,5 +112,13 @@ class TelegramNotifier:
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
         }
-        response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
+        for attempt in range(3):
+            try:
+                response = requests.post(url, json=payload, timeout=10)
+                response.raise_for_status()
+                return
+            except Exception as e:
+                if attempt == 2:
+                    raise
+                logger.warning("Telegram send failed (attempt %d/3): %s", attempt + 1, e)
+                time.sleep(2 ** attempt)

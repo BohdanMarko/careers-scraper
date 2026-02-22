@@ -25,7 +25,10 @@ def create_chrome_driver() -> webdriver.Chrome:
         opts.binary_location = chrome_binary
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
     service = Service(executable_path=chromedriver_path) if chromedriver_path else None
-    return webdriver.Chrome(options=opts, service=service) if service else webdriver.Chrome(options=opts)
+    driver = webdriver.Chrome(options=opts, service=service) if service else webdriver.Chrome(options=opts)
+    driver.set_page_load_timeout(30)
+    driver.implicitly_wait(0)
+    return driver
 
 
 class BaseScraper(ABC):
@@ -61,26 +64,3 @@ class BaseScraper(ABC):
         """
         pass
 
-    def matches_keywords(self, job: Dict, keywords: List[str]) -> bool:
-        """
-        Check if job matches any of the search keywords.
-
-        Args:
-            job: Job dictionary with title, description, department
-            keywords: List of keywords to search for
-
-        Returns:
-            True if any keyword matches, False otherwise
-        """
-        searchable_text = " ".join([
-            job.get('title', ''),
-            job.get('description', ''),
-            job.get('department', '')
-        ]).lower()
-
-        matches = any(keyword.lower() in searchable_text for keyword in keywords)
-        if matches:
-            logger.debug(
-                f"Job '{job.get('title', 'Unknown')}' matches keywords"
-            )
-        return matches

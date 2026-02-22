@@ -17,12 +17,12 @@ log_rotation:
 vacancies:
   - name: "Uklon"
     url: "https://careers.uklon.net/vacancies-ua"
-    keywords: ["middle .net", ".net", "backend", "back-end"]
+    keywords: ["middle .net", ".net", "backend", "back-end", "python"]
 
   - name: "CD PROJEKT RED"
     url: "https://www.cdprojektred.com/en/jobs?studio=poland"
-    keywords: ["DevOps", ".NET", "Developer Support"]
+    keywords: ["DevOps", ".NET", "Developer Support", "python"]
     
   - name: "Growe"
-    url: https://growe.com/career
-    keywords: ["middle .net", ".net", "backend", "back-end"]
+    url: "https://growe.com/career"
+    keywords: ["middle .net", ".net", "backend", "back-end", "python"]

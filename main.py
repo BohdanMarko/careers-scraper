@@ -1,8 +1,8 @@
 """Entry point for careers-scraper."""
 
 import sys
-import time
 import argparse
+import threading
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -40,9 +40,9 @@ def main():
     scheduler = JobScheduler()
     scheduler.start()
 
+    stop_event = threading.Event()
     try:
-        while True:
-            time.sleep(60)
+        stop_event.wait()
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         scheduler.stop()

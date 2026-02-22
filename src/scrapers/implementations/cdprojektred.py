@@ -2,7 +2,7 @@
 
 import logging
 from typing import List, Dict
-import time
+from selenium.webdriver.support.ui import WebDriverWait
 from scrapers.base import BaseScraper, create_chrome_driver
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class CDProjektRedScraper(BaseScraper):
             driver.get(self.url)
 
             # Wait for page to load and JavaScript to execute
-            time.sleep(5)
+            WebDriverWait(driver, 15).until(lambda d: d.execute_script("return typeof window.cdpData !== 'undefined' && window.cdpData !== null && window.cdpData.jobsData !== null"))
 
             # Extract job data from JavaScript variable
             try:
