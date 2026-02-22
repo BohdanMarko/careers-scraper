@@ -5,9 +5,10 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 ## What It Does
 
 - Scrapes career pages of configured companies on a fixed schedule
-- Filters new job listings by keywords
-- Sends a Telegram message per company for all new matching jobs
-- Deduplicates jobs in memory (no database needed)
+- Runs all scrapers in parallel for speed (~15s per cycle)
+- Filters new job listings by keywords (per-company, case-insensitive)
+- Sends a single Telegram message summarising all companies per cycle
+- Deduplicates jobs in memory — no database needed
 
 ## Supported Companies
 
@@ -19,35 +20,39 @@ A lightweight Python scraper that monitors company career pages, filters jobs by
 
 ```
 careers-scraper/
-├── main.py                        # Single entry point
+├── main.py                        # Single entry point (--single-run flag)
 ├── src/
-│   ├── config.py                  # Settings from config.yaml
+│   ├── config.py                  # Settings from config.yaml + env var overrides
 │   ├── scheduler.py               # APScheduler wrapper
 │   ├── core/
-│   │   └── logging.py             # Logging setup
+│   │   └── logging.py             # Logging setup, suppresses noisy libs
 │   ├── scrapers/
-│   │   ├── base.py                # BaseScraper ABC
+│   │   ├── base.py                # BaseScraper ABC + Chrome driver factory
 │   │   └── implementations/
 │   │       ├── uklon.py
 │   │       ├── cdprojektred.py
 │   │       └── growe.py
 │   ├── services/
-│   │   └── scraper_service.py     # Orchestrates scraping + notifications
+│   │   └── scraper_service.py     # Orchestrates scraping + dedup + notifications
 │   └── notifications/
-│       └── telegram.py            # Telegram bot
+│       └── telegram.py            # Telegram bot (HTML messages via requests.post)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml             # CI/CD: build Docker image + deploy to Azure
 ├── requirements.txt
-└── config.example.yaml
+├── config.example.yaml
+└── Dockerfile
 ```
 
 ## Local Setup
 
 ### Prerequisites
 
-- **Python 3.12+** (Windows official build recommended, not msys64)
-- **Google Chrome** (for Selenium-based scrapers)
-- **Telegram Bot token and chat ID**
+- **Python 3.13+**
+- **Google Chrome** (Selenium auto-downloads the matching ChromeDriver)
+- **Telegram bot token and chat ID** — see [Getting Telegram Credentials](#getting-telegram-credentials) below
 
-### 1. Create and Activate Virtual Environment
+### 1. Create and activate virtual environment
 
 ```bash
 python -m venv .venv
@@ -55,7 +60,7 @@ python -m venv .venv
 source .venv/Scripts/activate # Git Bash
 ```
 
-### 2. Install Dependencies
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -63,13 +68,11 @@ pip install -r requirements.txt
 
 ### 3. Configure
 
-Copy the example config and fill in your values:
-
 ```bash
 cp config.example.yaml config.yaml
 ```
 
-Edit `config.yaml`:
+Edit `config.yaml` with your credentials and keywords:
 
 ```yaml
 telegram_bot_token: YOUR_BOT_TOKEN_HERE
@@ -85,11 +88,9 @@ vacancies:
     keywords: ["developer"]
 ```
 
-> **Note:** `config.yaml` is in `.gitignore` — it contains secrets and is never committed.
+> `config.yaml` is in `.gitignore` — it contains secrets and is never committed.
 
-### 4. Get Telegram Credentials
-
-### 5. Run
+### 4. Run
 
 ```bash
 # Run scheduler (periodic, Ctrl+C to stop)
@@ -99,20 +100,109 @@ python main.py
 python main.py --single-run
 ```
 
-The app will immediately run a scraping cycle, then repeat on the configured interval (default: 60 minutes).
+On first start the app runs one scraping cycle immediately, then repeats on the configured interval.
 
-## Configuration Reference (`config.yaml`)
+---
+
+## Getting Telegram Credentials
+
+1. Open Telegram and message **@BotFather** → `/newbot` → follow prompts → copy the token
+2. Add your bot to the target chat or channel
+3. Send any message to that chat, then open:
+   `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+4. Find `"chat":{"id": -123456789}` — that number is your chat ID
+
+---
+
+## Configuration Reference
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `telegram_bot_token` | Yes | — | Telegram bot token from @BotFather |
-| `telegram_chat_id` | Yes | — | Your Telegram chat/user ID |
+| `telegram_bot_token` | Yes | — | Bot token from @BotFather. Can also be set via `TELEGRAM_BOT_TOKEN` env var |
+| `telegram_chat_id` | Yes | — | Target chat/channel ID. Can also be set via `TELEGRAM_CHAT_ID` env var |
 | `scrape_interval` | No | `60` | Minutes between scraping cycles |
-| `environment` | No | `development` | Logging level (`development` = DEBUG) |
-| `vacancies` | Yes | — | List of companies to scrape |
-| `vacancies[].name` | Yes | — | Must match a known scraper (see below) |
-| `vacancies[].url` | Yes | — | Career page URL |
-| `vacancies[].keywords` | Yes | — | Keywords to match jobs against (case-insensitive) |
+| `environment` | No | `development` | `development` = DEBUG logging, `production` = INFO |
+| `dedup_seen_urls` | No | `true` | Skip already-notified job URLs. Set to `false` in containers (no state between runs) |
+| `vacancies` | Yes | — | List of companies to scrape, in the order they appear in Telegram messages |
+| `vacancies[].name` | Yes | — | Must match a key in `SCRAPER_REGISTRY` (case-insensitive) |
+| `vacancies[].url` | Yes | — | Career page URL passed to the scraper |
+| `vacancies[].keywords` | Yes | — | Keywords matched against job title, department, and description |
+| `log_rotation.max_bytes` | No | `10485760` | Max log file size before rotation (10 MB) |
+| `log_rotation.backup_count` | No | `5` | Number of rotated log files to keep |
+
+### Environment variable overrides
+
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` environment variables take precedence over `config.yaml` values. This is how secrets are injected in the Azure deployment without baking them into the image.
+
+---
+
+## How Deduplication Works
+
+Seen job URLs are tracked in memory (`set`). On the first run every job is considered new. On subsequent runs only jobs with unseen URLs trigger a notification. Restarting the app resets the set.
+
+Set `dedup_seen_urls: false` when running in containers — each container run is a fresh process with no state from previous runs, so deduplication is unnecessary.
+
+---
+
+## Adding a New Company
+
+1. Create `src/scrapers/implementations/mycompany.py`:
+
+```python
+from scrapers.base import BaseScraper, create_chrome_driver
+from selenium.webdriver.common.by import By
+
+class MyCompanyScraper(BaseScraper):
+    def __init__(self, url: str = "https://careers.mycompany.com"):
+        super().__init__("MyCompany", url)
+
+    def scrape(self) -> list[dict]:
+        driver = None
+        try:
+            driver = create_chrome_driver()
+            driver.get(self.url)
+            # ... parse jobs ...
+            return []
+        except Exception as e:
+            logger.error("Error scraping MyCompany: %s", e)
+            return []
+        finally:
+            if driver:
+                driver.quit()
+```
+
+2. Register in `SCRAPER_REGISTRY` in `src/services/scraper_service.py`:
+```python
+"mycompany": MyCompanyScraper,
+```
+
+3. Add an entry to `config.yaml`:
+```yaml
+- name: "MyCompany"
+  url: "https://careers.mycompany.com"
+  keywords: ["python", "backend"]
+```
+
+Each scraper must return a list of dicts with these keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `title` | `str` | Job title |
+| `url` | `str` | Job detail URL — used for deduplication, must be unique per job |
+| `location` | `str` | Office location |
+| `department` | `str` | Team or department |
+| `description` | `str` | Any extra text to match keywords against |
+| `posted_date` | `datetime \| None` | Posting date if available |
+
+---
+
+## Deployment
+
+The app is designed to run as an **Azure Container Apps Job** on a CRON schedule (every 60 minutes). Each run spins up a fresh container, runs one scraping cycle, sends notifications, and exits. No infrastructure runs between cycles — cost is effectively $0/month.
+
+The `.github/workflows/deploy.yml` workflow automatically builds and pushes a new Docker image to ghcr.io and updates the Azure job on every push to `master`.
+
+---
 
 ## Dependencies
 
@@ -123,46 +213,17 @@ apscheduler==3.10.4
 pyyaml==6.0.2
 ```
 
-## How Deduplication Works
+No database, no web server, no ORM, no SDK wrappers.
 
-Seen job URLs are kept in memory (`set`). On first run every job is new. On subsequent runs only jobs with previously unseen URLs trigger a notification. Restarting the app resets the seen-URLs set.
-
-## Adding a New Company
-
-1. Create `src/scrapers/implementations/mycompany.py`:
-
-```python
-from scrapers.base import BaseScraper
-
-class MyCompanyScraper(BaseScraper):
-    def __init__(self, url: str = "https://careers.mycompany.com"):
-        super().__init__("MyCompany", url)
-
-    def scrape(self) -> list[dict]:
-        # return list of {"title", "url", "location", "department", "description", "posted_date"}
-        return []
-```
-
-2. Add to `src/scrapers/__init__.py` exports.
-3. Register in `SCRAPER_REGISTRY` in `src/services/scraper_service.py`:
-   ```python
-   "mycompany": MyCompanyScraper,
-   ```
-4. Add an entry to `config.yaml`:
-   ```yaml
-   - name: "MyCompany"
-     url: "https://careers.mycompany.com"
-     keywords: ["python", "backend"]
-   ```
+---
 
 ## Troubleshooting
 
-**ChromeDriver not found** — Chrome must be installed. Selenium 4.6+ auto-downloads the matching ChromeDriver via its built-in manager.
+**No jobs found** — Keywords must appear in the job title, department, or description. Check spelling and try broader terms.
 
-**Telegram not sending** — Check that `telegram_bot_token` and `telegram_chat_id` are set in `config.yaml`, and that you've started a conversation with the bot.
+**Telegram not sending** — Verify `telegram_bot_token` and `telegram_chat_id` in `config.yaml`. Make sure you've sent at least one message to the bot first.
 
-**No jobs found** — Check the keywords in `config.yaml` — they must appear in job title, department, or description.
+**ChromeDriver error** — Selenium 4.6+ auto-downloads the matching ChromeDriver. If it fails, set the `CHROMEDRIVER_PATH` env var to the driver binary path, and `CHROME_BINARY` to the Chrome binary path.
 
-## License
+**Scraper returns 0 jobs** — The career page HTML may have changed. Check the CSS selectors in the scraper implementation against the current live page.
 
-MIT
