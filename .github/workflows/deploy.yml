@@ -58,7 +58,8 @@ jobs:
             --name ${{ env.JOB_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.IMAGE }}:latest \
-            --timeout 600
+            --replica-timeout 600 \
+            --replica-retry-limit 1
 
       # Triggers an immediate run so you can verify the new image works.
       # Comment out this step if you don't want an auto-trigger on every push.
