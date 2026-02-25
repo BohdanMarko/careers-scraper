@@ -42,7 +42,7 @@ class TelegramNotifier:
                 total_matches, len(results),
             )
         except Exception as e:
-            logger.error("Failed to send cycle summary: %s", e)
+            logger.error("Failed to send cycle summary: %s", e, exc_info=True)
 
     def _format_section(self, result: dict) -> str | None:
         """Format one company's result into an HTML section.

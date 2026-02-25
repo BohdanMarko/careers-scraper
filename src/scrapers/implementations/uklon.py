@@ -6,44 +6,20 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from typing import List, Dict
-from scrapers.base import BaseScraper, create_chrome_driver
+from scrapers.base import BaseScraper
 
 logger = logging.getLogger(__name__)
 
-_MAX_ATTEMPTS = 3
-_RETRY_DELAY = 5  # seconds between attempts
 _RENDER_WAIT = 2  # seconds after scroll for lazy content to populate
 
 
 class UklonScraper(BaseScraper):
     """Scraper for Uklon careers page."""
 
+    _MAX_ATTEMPTS = 3
+
     def __init__(self, url: str = "https://careers.uklon.net/vacancies-ua"):
         super().__init__("Uklon", url)
-
-    def scrape(self) -> List[Dict]:
-        """Scrape job listings from Uklon careers page, retrying up to 3 times on empty results."""
-        jobs = []
-        for attempt in range(1, _MAX_ATTEMPTS + 1):
-            driver = None
-            try:
-                driver = create_chrome_driver()
-                jobs = self._attempt_scrape(driver)
-                if jobs:
-                    break
-                if attempt < _MAX_ATTEMPTS:
-                    logger.warning("Uklon: attempt %d returned 0 jobs, retrying in %ds...", attempt, _RETRY_DELAY)
-                    time.sleep(_RETRY_DELAY)
-            except Exception as e:
-                logger.error("Uklon: error on attempt %d: %s", attempt, e)
-                if attempt < _MAX_ATTEMPTS:
-                    time.sleep(_RETRY_DELAY)
-            finally:
-                if driver:
-                    driver.quit()
-
-        logger.info("Scraped %d jobs from Uklon", len(jobs))
-        return jobs
 
     def _attempt_scrape(self, driver) -> List[Dict]:
         """Single scraping attempt — load page, scroll, extract cards."""

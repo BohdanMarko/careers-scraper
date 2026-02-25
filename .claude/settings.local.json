@@ -19,7 +19,10 @@
       "Bash(source:*)",
       "Bash(where:*)",
       "Bash(\"C:/Users/marko/AppData/Local/Programs/Python/Python313/python.exe\" -m venv .venv)",
-      "Bash(PYTHONPATH=src .venv/Scripts/python.exe:*)"
+      "Bash(PYTHONPATH=src .venv/Scripts/python.exe:*)",
+      "Bash(az:*)",
+      "Bash(python3:*)",
+      "Bash(source .venv/Scripts/activate && python main.py 2>&1)"
     ]
   }
 }
