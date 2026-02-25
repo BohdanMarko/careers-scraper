@@ -28,6 +28,7 @@ class Settings:
     vacancies: list[VacancyConfig]
     environment: str = "development"
     dedup_seen_urls: bool = True
+    notify_on_match_only: bool = False
     log_rotation: LogRotationConfig = field(default_factory=LogRotationConfig)
 
 
@@ -62,6 +63,7 @@ def _load() -> Settings:
         vacancies=vacancies,
         environment=str(data.get("environment", "development")),
         dedup_seen_urls=bool(data.get("dedup_seen_urls", True)),
+        notify_on_match_only=bool(data.get("notify_on_match_only", False)),
         log_rotation=log_rotation,
     )
 

@@ -56,7 +56,8 @@ class ScraperService:
                 except Exception as e:
                     logger.error("Error scraping %s: %s", vacancy.name, e, exc_info=True)
 
-        if results:
+        has_new_matches = any(r["new_matches"] for r in results)
+        if results and (not settings.notify_on_match_only or has_new_matches):
             self.notifier.send_cycle_summary(results)
 
         logger.info("Scraping cycle finished")

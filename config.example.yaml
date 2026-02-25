@@ -7,6 +7,10 @@ environment: production
 # Set to false when running in containers (no cross-run state)
 dedup_seen_urls: false
 
+# Set to true to only send Telegram notifications when a new keyword match is found.
+# false (default) sends a summary every cycle regardless of matches.
+notify_on_match_only: true
+
 log_rotation:
   max_bytes: 10485760  # 10 MB
   backup_count: 5
