@@ -6,6 +6,7 @@ from datetime import datetime
 from scrapers.implementations.uklon import UklonScraper
 from scrapers.implementations.cdprojektred import CDProjektRedScraper
 from scrapers.implementations.growe import GroweScraper
+from scrapers.implementations.growetalents import GroweTalentsScraper
 from notifications import TelegramNotifier
 from config import settings, VacancyConfig
 
@@ -15,7 +16,8 @@ logger = logging.getLogger(__name__)
 SCRAPER_REGISTRY = {
     "uklon": UklonScraper,
     "cd projekt red": CDProjektRedScraper,
-    "growe": GroweScraper
+    "growe": GroweScraper,
+    "growe talents": GroweTalentsScraper
 }
 
 

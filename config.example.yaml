@@ -27,3 +27,7 @@ vacancies:
   - name: "Growe"
     url: "https://growe.com/career"
     keywords: ["middle .net", ".net", "backend", "back-end", "c#"]
+
+  - name: "Growe Talents"
+    url: "https://growetalents.com/vacancies"
+    keywords: ["middle .net", ".net", "backend", "back-end", "c#"]
